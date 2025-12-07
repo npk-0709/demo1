@@ -1,17 +1,16 @@
 const int trigPin = 7;
 const int echoPin = 8;
-const int IN1_PUMP1 = 9;
-const int IN2_PUMP1 = 10;
-const int ENA_PUMP1 = 11;
-const int IN3_PUMP2 = 5;
-const int IN4_PUMP2 = 6;
-const int ENB_PUMP2 = 3;
 
-// Ngưỡng điều khiển
+
+const int IN1 = 9;   
+const int IN2 = 10;
+const int IN3 = 5;   
+const int IN4 = 6;
+
+
 const float LEVEL_LOW = 13.0;   // Dưới 13cm -> Bơm 1 bật (bơm ra)
 const float LEVEL_HIGH = 17.0;  // Trên 17cm -> Bơm 2 bật (hút vào)
 const float HYSTERESIS = 0.5;   // Độ trễ tránh dao động
-const int PUMP_SPEED = 200;
 
 bool pump1_running = false;
 bool pump2_running = false;
@@ -19,17 +18,19 @@ bool pump2_running = false;
 void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-  pinMode(IN1_PUMP1, OUTPUT);
-  pinMode(IN2_PUMP1, OUTPUT);
-  pinMode(ENA_PUMP1, OUTPUT);
-  pinMode(IN3_PUMP2, OUTPUT);
-  pinMode(IN4_PUMP2, OUTPUT);
-  pinMode(ENB_PUMP2, OUTPUT);
+  
+  // Cấu hình chân L298N - chỉ cần IN1-4
+  pinMode(IN1, OUTPUT);
+  pinMode(IN2, OUTPUT);
+  pinMode(IN3, OUTPUT);
+  pinMode(IN4, OUTPUT);
   
   Serial.begin(9600);
   Serial.println("=== HỆ THỐNG ĐIỀU KHIỂN BƠM NƯỚC ===");
+  Serial.println("Sử dụng 1 module L298N - chỉ dùng IN1-4");
   Serial.println("Mực nước < 13cm: BƠM 1 BẬT (Bơm ra ngoài)");
   Serial.println("Mực nước > 17cm: BƠM 2 BẬT (Hút nước vào)");
+  Serial.println("LƯU Ý: Giữ jumper ENA/ENB trên module L298N");
   Serial.println("====================================");
 }
 
@@ -51,19 +52,17 @@ float getDistance() {
 
 void setPump1State(bool state) {
   if (state) {
-    digitalWrite(IN1_PUMP1, HIGH);
-    digitalWrite(IN2_PUMP1, LOW);
-    analogWrite(ENA_PUMP1, PUMP_SPEED);
+    digitalWrite(IN1, HIGH);
+    digitalWrite(IN2, LOW);
     if (!pump1_running) {
-      Serial.println(">>> BƠM 1 BẬT (Bơm ra ngoài)");
+      Serial.println(">>> BƠM 1 BẬT (Motor A - Bơm ra ngoài)");
       pump1_running = true;
     }
   } else {
-    analogWrite(ENA_PUMP1, 0);
-    digitalWrite(IN1_PUMP1, LOW);
-    digitalWrite(IN2_PUMP1, LOW);
+    digitalWrite(IN1, LOW);
+    digitalWrite(IN2, LOW);
     if (pump1_running) {
-      Serial.println(">>> BƠM 1 TẮT");
+      Serial.println(">>> BƠM 1 TẮT (Motor A)");
       pump1_running = false;
     }
   }
@@ -71,19 +70,17 @@ void setPump1State(bool state) {
 
 void setPump2State(bool state) {
   if (state) {
-    digitalWrite(IN3_PUMP2, HIGH);
-    digitalWrite(IN4_PUMP2, LOW);
-    analogWrite(ENB_PUMP2, PUMP_SPEED);
+    digitalWrite(IN3, HIGH);
+    digitalWrite(IN4, LOW);
     if (!pump2_running) {
-      Serial.println(">>> BƠM 2 BẬT (Hút nước vào)");
+      Serial.println(">>> BƠM 2 BẬT (Motor B - Hút nước vào)");
       pump2_running = true;
     }
   } else {
-    analogWrite(ENB_PUMP2, 0);
-    digitalWrite(IN3_PUMP2, LOW);
-    digitalWrite(IN4_PUMP2, LOW);
+    digitalWrite(IN3, LOW);
+    digitalWrite(IN4, LOW);
     if (pump2_running) {
-      Serial.println(">>> BƠM 2 TẮT");
+      Serial.println(">>> BƠM 2 TẮT (Motor B)");
       pump2_running = false;
     }
   }
