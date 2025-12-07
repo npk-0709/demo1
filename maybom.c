@@ -6,29 +6,30 @@ const int ENA_PUMP1 = 11;
 const int IN3_PUMP2 = 5;
 const int IN4_PUMP2 = 6;
 const int ENB_PUMP2 = 3;
-const float LEVEL_LOW = 17.0;  
-const float LEVEL_HIGH = 13.0;
-const float HYSTERESIS = 0.5;
+
+// Ngưỡng điều khiển
+const float LEVEL_LOW = 13.0;   // Dưới 13cm -> Bơm 1 bật (bơm ra)
+const float LEVEL_HIGH = 17.0;  // Trên 17cm -> Bơm 2 bật (hút vào)
+const float HYSTERESIS = 0.5;   // Độ trễ tránh dao động
 const int PUMP_SPEED = 200;
+
 bool pump1_running = false;
 bool pump2_running = false;
 
 void setup() {
   pinMode(trigPin, OUTPUT);
   pinMode(echoPin, INPUT);
-
   pinMode(IN1_PUMP1, OUTPUT);
   pinMode(IN2_PUMP1, OUTPUT);
   pinMode(ENA_PUMP1, OUTPUT);
-
   pinMode(IN3_PUMP2, OUTPUT);
   pinMode(IN4_PUMP2, OUTPUT);
   pinMode(ENB_PUMP2, OUTPUT);
-
+  
   Serial.begin(9600);
   Serial.println("=== HỆ THỐNG ĐIỀU KHIỂN BƠM NƯỚC ===");
-  Serial.println("Mực nước THẤP (>17cm): BƠM 2 BƠM VÀO");
-  Serial.println("Mực nước CAO (<13cm): BƠM 1 BƠM RA");
+  Serial.println("Mực nước < 13cm: BƠM 1 BẬT (Bơm ra ngoài)");
+  Serial.println("Mực nước > 17cm: BƠM 2 BẬT (Hút nước vào)");
   Serial.println("====================================");
 }
 
@@ -38,7 +39,7 @@ float getDistance() {
   digitalWrite(trigPin, HIGH);
   delayMicroseconds(10);
   digitalWrite(trigPin, LOW);
-
+  
   long duration = pulseIn(echoPin, HIGH, 30000);
   
   if (duration == 0) {
@@ -74,7 +75,7 @@ void setPump2State(bool state) {
     digitalWrite(IN4_PUMP2, LOW);
     analogWrite(ENB_PUMP2, PUMP_SPEED);
     if (!pump2_running) {
-      Serial.println(">>> BƠM 2 BẬT (Bơm vào)");
+      Serial.println(">>> BƠM 2 BẬT (Hút nước vào)");
       pump2_running = true;
     }
   } else {
@@ -90,32 +91,41 @@ void setPump2State(bool state) {
 
 void loop() {
   float distanceCm = getDistance();
+  
   if (distanceCm < 0) {
     Serial.println("LỖI: Không đọc được cảm biến!");
     delay(1000);
     return;
   }
+  
   Serial.print("Khoảng cách: ");
   Serial.print(distanceCm, 1);
   Serial.print(" cm | ");
-  if (!pump2_running && distanceCm > LEVEL_LOW) {
-    Serial.print("Nước THẤP! ");
-    setPump2State(true);
-  } else if (pump2_running && distanceCm < (LEVEL_LOW - HYSTERESIS)) {
-    Serial.print("Nước đã đủ. ");
-    setPump2State(false);
-  }
-  if (!pump1_running && distanceCm < LEVEL_HIGH) {
+  
+  // Điều khiển BƠM 1: Bật khi mực nước < 13cm (bơm ra ngoài)
+  if (!pump1_running && distanceCm < LEVEL_LOW) {
     Serial.print("Nước CAO! ");
     setPump1State(true);
-  } else if (pump1_running && distanceCm > (LEVEL_HIGH + HYSTERESIS)) {
+    setPump2State(false); // Tắt bơm 2 nếu đang chạy
+  } else if (pump1_running && distanceCm > (LEVEL_LOW + HYSTERESIS)) {
     Serial.print("Nước đã hạ. ");
     setPump1State(false);
   }
+  
+  // Điều khiển BƠM 2: Bật khi mực nước > 17cm (hút nước vào)
+  if (!pump2_running && distanceCm > LEVEL_HIGH) {
+    Serial.print("Nước THẤP! ");
+    setPump2State(true);
+    setPump1State(false); // Tắt bơm 1 nếu đang chạy
+  } else if (pump2_running && distanceCm < (LEVEL_HIGH - HYSTERESIS)) {
+    Serial.print("Nước đã đủ. ");
+    setPump2State(false);
+  }
+  
   Serial.print("| BƠM 1: ");
   Serial.print(pump1_running ? "BẬT" : "TẮT");
   Serial.print(" | BƠM 2: ");
   Serial.println(pump2_running ? "BẬT" : "TẮT");
-
+  
   delay(500);
 }
